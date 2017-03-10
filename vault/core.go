@@ -64,9 +64,9 @@ const (
 	// of orphaned leader keys, to prevent slamming the backend.
 	leaderPrefixCleanDelay = 200 * time.Millisecond
 
-	// coreUnsealMetadataPath is the path used to store the metadata about
+	// coreSecretSharesMetadataPath is the path used to store the metadata about
 	// unseal key shards.
-	coreUnsealMetadataPath = "core/unseal_metadata"
+	coreSecretSharesMetadataPath = "core/secret_shares_metadata"
 
 	// coreKeyringCanaryPath is used as a canary to indicate to replicated
 	// clusters that they need to perform a rekey operation synchronously; this
@@ -908,36 +908,36 @@ func (c *Core) unsealInternal(masterKey []byte) (bool, error) {
 	}
 
 	// Fetch the metadata associated with the unseal keys
-	keysMetadataEntry, err := c.barrier.Get(coreUnsealMetadataPath)
+	keySharesMetadataEntry, err := c.barrier.Get(coreSecretSharesMetadataPath)
 	if err != nil {
 		return false, fmt.Errorf("failed to fetch unseal metadata entry: %v", err)
 	}
 
 	// For BC compatibility, log the metadata information only if it is
 	// available
-	var unsealMetadataEntry unsealMetadataStorageEntry
-	if keysMetadataEntry != nil {
+	var secretSharesMetadataValue secretSharesMetadataStorageValue
+	if keySharesMetadataEntry != nil {
 		// Decode the unseal metadata information
-		if err = jsonutil.DecodeJSON(keysMetadataEntry.Value, &unsealMetadataEntry); err != nil {
+		if err = jsonutil.DecodeJSON(keySharesMetadataEntry.Value, &secretSharesMetadataValue); err != nil {
 			return false, fmt.Errorf("failed to decode unseal metadata entry: %v", err)
 		}
 
 		for _, unlockPart := range c.unlockInfo.Parts {
 			// Fetch the metadata associated to the unseal key shard
-			keyMetadata, ok := unsealMetadataEntry.Data[base64.StdEncoding.EncodeToString(salt.SHA256Hash(unlockPart))]
+			secretShareMetadata, ok := secretSharesMetadataValue.Data[base64.StdEncoding.EncodeToString(salt.SHA256Hash(unlockPart))]
 
 			// If the storage entry is successfully read, metadata associated
 			// with all the unseal keys must be available.
-			if !ok || keyMetadata == nil {
+			if !ok || secretShareMetadata == nil {
 				c.logger.Error("core: failed to fetch unseal key metadata")
 				return false, fmt.Errorf("failed to fetch unseal key metadata")
 			}
 
 			switch {
-			case keyMetadata.ID != "" && keyMetadata.Name != "":
-				c.logger.Info(fmt.Sprintf("core: unseal key with identifier %q with name %q supplied for unsealing", keyMetadata.ID, keyMetadata.Name))
-			case keyMetadata.ID != "":
-				c.logger.Info(fmt.Sprintf("core: unseal key with identifier %q supplied for unsealing", keyMetadata.ID))
+			case secretShareMetadata.ID != "" && secretShareMetadata.Name != "":
+				c.logger.Info(fmt.Sprintf("core: unseal key with identifier %q with name %q supplied for unsealing", secretShareMetadata.ID, secretShareMetadata.Name))
+			case secretShareMetadata.ID != "":
+				c.logger.Info(fmt.Sprintf("core: unseal key with identifier %q supplied for unsealing", secretShareMetadata.ID))
 			default:
 				c.logger.Error("core: missing unseal key shard metadata")
 				return false, fmt.Errorf("missing unseal key shard metadata")

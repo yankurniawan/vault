@@ -22,7 +22,7 @@ func handleSysInitKeyIdentifiers(core *vault.Core) http.Handler {
 
 			identifiers := &InitKeyIdentifiersResponse{}
 			for _, identifier := range result.KeyIdentifiers {
-				identifiers.KeyIdentifiers = append(identifiers.KeyIdentifiers, &UnsealKeyMetadata{
+				identifiers.KeyIdentifiers = append(identifiers.KeyIdentifiers, &KeyShareMetadata{
 					ID:   identifier.ID,
 					Name: identifier.Name,
 				})
@@ -149,15 +149,15 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 		RootToken: result.RootToken,
 	}
 
-	var keysMetadata []*UnsealKeyMetadata
-	for _, keyMetadata := range result.KeysMetadata {
-		keysMetadata = append(keysMetadata, &UnsealKeyMetadata{
-			Name: keyMetadata.Name,
-			ID:   keyMetadata.ID,
+	var keySharesMetadata []*KeyShareMetadata
+	for _, keyShareMetadata := range result.SecretSharesMetadata {
+		keySharesMetadata = append(keySharesMetadata, &KeyShareMetadata{
+			Name: keyShareMetadata.Name,
+			ID:   keyShareMetadata.ID,
 		})
 	}
 
-	resp.KeysMetadata = keysMetadata
+	resp.SecretSharesMetadata = keySharesMetadata
 
 	if len(result.RecoveryShares) > 0 {
 		resp.RecoveryKeys = make([]string, 0, len(result.RecoveryShares))
@@ -174,7 +174,7 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 }
 
 type InitKeyIdentifiersResponse struct {
-	KeyIdentifiers []*UnsealKeyMetadata `json:"key_identifiers"`
+	KeyIdentifiers []*KeyShareMetadata `json:"key_identifiers"`
 }
 
 type InitRequest struct {
@@ -190,15 +190,15 @@ type InitRequest struct {
 }
 
 type InitResponse struct {
-	Keys            []string             `json:"keys"`
-	KeysB64         []string             `json:"keys_base64"`
-	RecoveryKeys    []string             `json:"recovery_keys,omitempty"`
-	RecoveryKeysB64 []string             `json:"recovery_keys_base64,omitempty"`
-	RootToken       string               `json:"root_token"`
-	KeysMetadata    []*UnsealKeyMetadata `json:"keys_metadata"`
+	Keys                 []string            `json:"keys"`
+	KeysB64              []string            `json:"keys_base64"`
+	RecoveryKeys         []string            `json:"recovery_keys,omitempty"`
+	RecoveryKeysB64      []string            `json:"recovery_keys_base64,omitempty"`
+	RootToken            string              `json:"root_token"`
+	SecretSharesMetadata []*KeyShareMetadata `json:"secret_shares_metadata"`
 }
 
-type UnsealKeyMetadata struct {
+type KeyShareMetadata struct {
 	Name string `json:"name" structs:"name" mapstructure:"name"`
 	ID   string `json:"id" structs:"id" mapstructure:"id"`
 }

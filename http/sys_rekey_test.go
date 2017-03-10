@@ -165,7 +165,7 @@ func TestSysRekey_badKey(t *testing.T) {
 	testResponseStatus(t, resp, 400)
 }
 
-func TestSysRekey_UnsealMetadata(t *testing.T) {
+func TestSysRekey_SecretSharesMetadata(t *testing.T) {
 	core, keys, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
@@ -196,20 +196,20 @@ func TestSysRekey_UnsealMetadata(t *testing.T) {
 		t.Fatalf("failed to rekey")
 	}
 
-	keysMetadata := actual["keys_metadata"].([]interface{})
-	if len(keysMetadata) != 5 {
-		t.Fatalf("bad: length of keys_metadata: expected: 5, actual: %d", len(keysMetadata))
+	secretSharesMetadata := actual["secret_shares_metadata"].([]interface{})
+	if len(secretSharesMetadata) != 5 {
+		t.Fatalf("bad: length of secret_shares_metadata: expected: 5, actual: %d", len(secretSharesMetadata))
 	}
 
-	for _, item := range keysMetadata {
+	for _, item := range secretSharesMetadata {
 		metadata := item.(map[string]interface{})
 		if metadata["id"].(string) == "" {
-			t.Fatalf("bad: missing identifier in keysMetadata: %#v", keysMetadata)
+			t.Fatalf("bad: missing identifier in secretSharesMetadata: %#v", secretSharesMetadata)
 		}
 	}
 }
 
-func TestSysRekey_UnsealMetadataKeyIdentifierNames(t *testing.T) {
+func TestSysRekey_SecretSharesMetadataKeyIdentifierNames(t *testing.T) {
 	core, keys, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
@@ -242,15 +242,15 @@ func TestSysRekey_UnsealMetadataKeyIdentifierNames(t *testing.T) {
 	}
 	nameList := []string{"first", "second", "third", "forth", "fifth"}
 
-	keysMetadata := actual["keys_metadata"].([]interface{})
-	if len(keysMetadata) != 5 {
-		t.Fatalf("bad: length of keys_metadata: expected: 5, actual: %d", len(keysMetadata))
+	secretSharesMetadata := actual["secret_shares_metadata"].([]interface{})
+	if len(secretSharesMetadata) != 5 {
+		t.Fatalf("bad: length of secret_shares_metadata: expected: 5, actual: %d", len(secretSharesMetadata))
 	}
 
-	for _, item := range keysMetadata {
+	for _, item := range secretSharesMetadata {
 		metadata := item.(map[string]interface{})
 		if metadata["id"].(string) == "" {
-			t.Fatalf("bad: missing identifier in keysMetadata: %#v", keysMetadata)
+			t.Fatalf("bad: missing identifier in secretSharesMetadata: %#v", secretSharesMetadata)
 		}
 		if metadata["name"].(string) == "" {
 			t.Fatalf("invalid key identifier name")
@@ -309,7 +309,7 @@ func TestSysRekey_Update(t *testing.T) {
 			expected["complete"] = true
 			expected["keys"] = actual["keys"]
 			expected["keys_base64"] = actual["keys_base64"]
-			expected["keys_metadata"] = actual["keys_metadata"]
+			expected["secret_shares_metadata"] = actual["secret_shares_metadata"]
 		}
 
 		if i+1 < len(keys) && (actual["nonce"] == nil || actual["nonce"].(string) == "") {

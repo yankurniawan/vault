@@ -240,35 +240,35 @@ func (c *Core) GenerateRootUpdate(key []byte, nonce string) (*GenerateRootResult
 
 	// Fetch the unseal keys metadata and log which of the unseal key holders
 	// generated the root token
-	keysMetadataEntry, err := c.barrier.Get(coreUnsealMetadataPath)
+	keySharesMetadataEntry, err := c.barrier.Get(coreSecretSharesMetadataPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch unseal metadata entry: %v", err)
 	}
 
 	// For BC compatibility, log the metadata information only if it is
 	// available
-	var unsealMetadataEntry unsealMetadataStorageEntry
-	if keysMetadataEntry != nil {
+	var secretSharesMetadataValue secretSharesMetadataStorageValue
+	if keySharesMetadataEntry != nil {
 		// Decode the unseal metadata information
-		if err = jsonutil.DecodeJSON(keysMetadataEntry.Value, &unsealMetadataEntry); err != nil {
+		if err = jsonutil.DecodeJSON(keySharesMetadataEntry.Value, &secretSharesMetadataValue); err != nil {
 			return nil, fmt.Errorf("failed to decode unseal metadata entry: %v", err)
 		}
 
 		for _, unlockPart := range c.generateRootProgress {
 			// Fetch the metadata associated to the unseal key shard
-			keyMetadata, _ := unsealMetadataEntry.Data[base64.StdEncoding.EncodeToString(salt.SHA256Hash(unlockPart))]
+			secretShareMetadata, _ := secretSharesMetadataValue.Data[base64.StdEncoding.EncodeToString(salt.SHA256Hash(unlockPart))]
 
 			// Ideally we need to error out if key metadata is not available.
 			// When this code path is hit with recovery keys there won't be
 			// matching key metadata against it. Hence checking it for not being
 			// nil.
 
-			if keyMetadata != nil {
+			if secretShareMetadata != nil {
 				switch {
-				case keyMetadata.ID != "" && keyMetadata.Name != "":
-					c.logger.Info(fmt.Sprintf("core: unseal key with identifier %q with name %q supplied for generating root token", keyMetadata.ID, keyMetadata.Name))
-				case keyMetadata.ID != "":
-					c.logger.Info(fmt.Sprintf("core: unseal key with identifier %q supplied for generating root token", keyMetadata.ID))
+				case secretShareMetadata.ID != "" && secretShareMetadata.Name != "":
+					c.logger.Info(fmt.Sprintf("core: unseal key with identifier %q with name %q supplied for generating root token", secretShareMetadata.ID, secretShareMetadata.Name))
+				case secretShareMetadata.ID != "":
+					c.logger.Info(fmt.Sprintf("core: unseal key with identifier %q supplied for generating root token", secretShareMetadata.ID))
 				default:
 					c.logger.Error("core: missing unseal key shard metadata while generating root token")
 					return nil, fmt.Errorf("missing unseal key shard metadata while generating root token")

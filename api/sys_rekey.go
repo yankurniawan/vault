@@ -188,13 +188,13 @@ type RekeyStatusResponse struct {
 }
 
 type RekeyUpdateResponse struct {
-	Nonce           string
-	Complete        bool
-	Keys            []string
-	KeysB64         []string `json:"keys_base64"`
-	PGPFingerprints []string `json:"pgp_fingerprints"`
-	Backup          bool
-	KeysMetadata    []*UnsealKeyMetadata `json:"keys_metadata"`
+	Nonce                string
+	Complete             bool
+	Keys                 []string
+	KeysB64              []string `json:"keys_base64"`
+	PGPFingerprints      []string `json:"pgp_fingerprints"`
+	Backup               bool
+	SecretSharesMetadata []*KeyShareMetadata `json:"secret_shares_metadata"`
 }
 
 type RekeyRetrieveResponse struct {

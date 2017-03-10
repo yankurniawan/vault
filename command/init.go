@@ -234,18 +234,18 @@ func (c *InitCommand) runInit(check bool, initRequest *api.InitRequest) int {
 		}
 	}
 
-	if len(resp.KeysMetadata) > 0 {
-		if len(resp.Keys) != len(resp.KeysMetadata) {
+	if len(resp.SecretSharesMetadata) > 0 {
+		if len(resp.Keys) != len(resp.SecretSharesMetadata) {
 			c.Ui.Error("Number of keys returned is not matching the number of key metadata items")
 			return 1
 		}
 
-		for i, keyMetadata := range resp.KeysMetadata {
+		for i, secretShareMetadata := range resp.SecretSharesMetadata {
 			switch {
-			case keyMetadata.ID != "" && keyMetadata.Name != "":
-				c.Ui.Output(fmt.Sprintf("Unseal Key Identifier %d with name %q: %s", i+1, keyMetadata.Name, keyMetadata.ID))
-			case keyMetadata.ID != "":
-				c.Ui.Output(fmt.Sprintf("Unseal Key Identifier %d: %s", i+1, keyMetadata.ID))
+			case secretShareMetadata.ID != "" && secretShareMetadata.Name != "":
+				c.Ui.Output(fmt.Sprintf("Unseal Key Identifier %d with name %q: %s", i+1, secretShareMetadata.Name, secretShareMetadata.ID))
+			case secretShareMetadata.ID != "":
+				c.Ui.Output(fmt.Sprintf("Unseal Key Identifier %d: %s", i+1, secretShareMetadata.ID))
 			default:
 				c.Ui.Error("Invalid key metadata")
 				return 1

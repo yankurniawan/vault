@@ -87,7 +87,7 @@ func TestSysInit_pgpKeysEntriesForRecovery(t *testing.T) {
 	testResponseStatus(t, resp, 400)
 }
 
-func TestSysInit_UnsealMetadata(t *testing.T) {
+func TestSysInit_SecretSharesMetadata(t *testing.T) {
 	core := vault.TestCore(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
@@ -103,15 +103,15 @@ func TestSysInit_UnsealMetadata(t *testing.T) {
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 
-	keysMetadata := actual["keys_metadata"].([]interface{})
-	if len(keysMetadata) != 5 {
-		t.Fatalf("bad: length of keys_metadata: expected: 5, actual: %d", len(keysMetadata))
+	secretSharesMetadata := actual["secret_shares_metadata"].([]interface{})
+	if len(secretSharesMetadata) != 5 {
+		t.Fatalf("bad: length of secret_shares_metadata: expected: 5, actual: %d", len(secretSharesMetadata))
 	}
 
-	for _, item := range keysMetadata {
+	for _, item := range secretSharesMetadata {
 		metadata := item.(map[string]interface{})
 		if metadata["id"].(string) == "" {
-			t.Fatalf("bad: missing identifier in keysMetadata: %#v", keysMetadata)
+			t.Fatalf("bad: missing identifier in secretSharesMetadata: %#v", secretSharesMetadata)
 		}
 	}
 }
@@ -167,7 +167,7 @@ func TestSysInit_KeyIdentifiersCase2(t *testing.T) {
 	}
 }
 
-func TestSysInit_UnsealMetadataKeyIdentifierNames(t *testing.T) {
+func TestSysInit_SecretSharesMetadataKeyIdentifierNames(t *testing.T) {
 	core := vault.TestCore(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
@@ -187,17 +187,17 @@ func TestSysInit_UnsealMetadataKeyIdentifierNames(t *testing.T) {
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 
-	keysMetadata := actual["keys_metadata"].([]interface{})
+	secretSharesMetadata := actual["secret_shares_metadata"].([]interface{})
 	nameList := []string{"first", "second", "third", "forth", "fifth"}
 
-	if len(keysMetadata) != 5 {
-		t.Fatalf("bad: length of keys_metadata: expected: 5, actual: %d", len(keysMetadata))
+	if len(secretSharesMetadata) != 5 {
+		t.Fatalf("bad: length of secret_shares_metadata: expected: 5, actual: %d", len(secretSharesMetadata))
 	}
 
-	for _, item := range keysMetadata {
+	for _, item := range secretSharesMetadata {
 		metadata := item.(map[string]interface{})
 		if metadata["id"].(string) == "" {
-			t.Fatalf("bad: missing identifier in keysMetadata: %#v", keysMetadata)
+			t.Fatalf("bad: missing identifier in secretSharesMetadata: %#v", secretSharesMetadata)
 		}
 		if metadata["name"].(string) == "" {
 			t.Fatalf("invalid key identifier name")

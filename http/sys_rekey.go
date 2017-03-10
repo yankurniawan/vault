@@ -214,15 +214,15 @@ func handleSysRekeyUpdate(core *vault.Core, recovery bool) http.Handler {
 			resp.Keys = keys
 			resp.KeysB64 = keysB64
 
-			var keysMetadata []*UnsealKeyMetadata
-			for _, keyMetadata := range result.KeysMetadata {
-				keysMetadata = append(keysMetadata, &UnsealKeyMetadata{
-					Name: keyMetadata.Name,
-					ID:   keyMetadata.ID,
+			var secretSharesMetadata []*KeyShareMetadata
+			for _, secretShareMetadata := range result.SecretSharesMetadata {
+				secretSharesMetadata = append(secretSharesMetadata, &KeyShareMetadata{
+					Name: secretShareMetadata.Name,
+					ID:   secretShareMetadata.ID,
 				})
 			}
 
-			resp.KeysMetadata = keysMetadata
+			resp.SecretSharesMetadata = secretSharesMetadata
 
 			respondOk(w, resp)
 		} else {
@@ -257,11 +257,11 @@ type RekeyUpdateRequest struct {
 }
 
 type RekeyUpdateResponse struct {
-	Nonce           string               `json:"nonce"`
-	Complete        bool                 `json:"complete"`
-	Keys            []string             `json:"keys"`
-	KeysB64         []string             `json:"keys_base64"`
-	PGPFingerprints []string             `json:"pgp_fingerprints"`
-	Backup          bool                 `json:"backup"`
-	KeysMetadata    []*UnsealKeyMetadata `json:"keys_metadata"`
+	Nonce                string              `json:"nonce"`
+	Complete             bool                `json:"complete"`
+	Keys                 []string            `json:"keys"`
+	KeysB64              []string            `json:"keys_base64"`
+	PGPFingerprints      []string            `json:"pgp_fingerprints"`
+	Backup               bool                `json:"backup"`
+	SecretSharesMetadata []*KeyShareMetadata `json:"secret_shares_metadata"`
 }

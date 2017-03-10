@@ -14,17 +14,17 @@ import (
 	"github.com/hashicorp/vault/shamir"
 )
 
-// unsealMetadataStorageEntry holds metadata about all the unseal key shards.
+// secretSharesMetadataStorageValue holds metadata about all the unseal key shards.
 // This informaion is stored during the initialization and is fetched post
 // unseal for logging purposes.
-type unsealMetadataStorageEntry struct {
+type secretSharesMetadataStorageValue struct {
 	// Data is a map from each of the unseal key shard to its respective
 	// identifier.
-	Data map[string]*UnsealKeyMetadata `json:"data" structs:"data" mapstructure:"data"`
+	Data map[string]*KeyShareMetadata `json:"data" structs:"data" mapstructure:"data"`
 }
 
-// UnsealKeyMetadata holds metadata associated with each unseal key shard
-type UnsealKeyMetadata struct {
+// KeyShareMetadata holds metadata associated with each unseal key shard
+type KeyShareMetadata struct {
 	// Name is a human readable name optionally provided by the caller to be
 	// associated with the identifier of the unseal key.
 	Name string `json:"name" structs:"name" mapstructure:"name"`
@@ -44,16 +44,16 @@ type InitParams struct {
 // InitResult is used to provide the key parts back after
 // they are generated as part of the initialization.
 type InitResult struct {
-	SecretShares   [][]byte
-	RecoveryShares [][]byte
-	RootToken      string
-	KeysMetadata   []*UnsealKeyMetadata
+	SecretShares         [][]byte
+	RecoveryShares       [][]byte
+	RootToken            string
+	SecretSharesMetadata []*KeyShareMetadata
 }
 
 // InitKeyIdentifiersResponse contains the UUID identifiers associated with the
 // unseal key shards
 type InitKeyIdentifiersResponse struct {
-	KeyIdentifiers []*UnsealKeyMetadata
+	KeyIdentifiers []*KeyShareMetadata
 }
 
 // GenerateSharesResult is used to provide the master key and its unseal key
@@ -78,7 +78,7 @@ func (c *Core) KeyIdentifiers() (*InitKeyIdentifiersResponse, error) {
 		return nil, consts.ErrStandby
 	}
 
-	entry, err := c.barrier.Get(coreUnsealMetadataPath)
+	entry, err := c.barrier.Get(coreSecretSharesMetadataPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch unseal metadata entry: %v", err)
 	}
@@ -86,17 +86,17 @@ func (c *Core) KeyIdentifiers() (*InitKeyIdentifiersResponse, error) {
 		return nil, nil
 	}
 
-	var storageEntry unsealMetadataStorageEntry
-	if err = jsonutil.DecodeJSON(entry.Value, &storageEntry); err != nil {
+	var secretSharesMetadataValue secretSharesMetadataStorageValue
+	if err = jsonutil.DecodeJSON(entry.Value, &secretSharesMetadataValue); err != nil {
 		return nil, fmt.Errorf("failed to decode unseal metadata entry: %v", err)
 	}
 
 	response := &InitKeyIdentifiersResponse{}
-	for _, unsealKeyMetadata := range storageEntry.Data {
-		if unsealKeyMetadata == nil || unsealKeyMetadata.ID == "" {
+	for _, keyShareMetadata := range secretSharesMetadataValue.Data {
+		if keyShareMetadata == nil || keyShareMetadata.ID == "" {
 			return nil, fmt.Errorf("invalid unseal metadata entry in storage")
 		}
-		response.KeyIdentifiers = append(response.KeyIdentifiers, unsealKeyMetadata)
+		response.KeyIdentifiers = append(response.KeyIdentifiers, keyShareMetadata)
 	}
 
 	return response, nil
@@ -171,54 +171,54 @@ func (c *Core) generateShares(sc *SealConfig) (*GenerateSharesResult, error) {
 	}, nil
 }
 
-// prepareUnsealKeySharesMetadata takes in the unseal key shards, both
+// prepareKeySharesMetadata takes in the unseal key shards, both
 // encrypted and unencrypted, associates identifiers for each key shard and
 // JSON encodes it. Identifier for unencrypted key shards will be UUIDs.
-func (c *Core) prepareUnsealKeySharesMetadata(unsealKeyShares [][]byte, keyIdentifierNames string) ([]byte, []*UnsealKeyMetadata, error) {
+func (c *Core) prepareKeySharesMetadata(keyShares [][]byte, keyIdentifierNames string) ([]byte, []*KeyShareMetadata, error) {
 	// If keyIdentifierNames are supplied, parse them
 	var identifierNames []string
 	if keyIdentifierNames != "" {
 		identifierNames = strutil.ParseDedupAndSortStrings(keyIdentifierNames, ",")
 
-		if len(identifierNames) != len(unsealKeyShares) {
+		if len(identifierNames) != len(keyShares) {
 			c.logger.Error("core: number of key identifier names not matching the number of key shares")
 			return nil, nil, fmt.Errorf("number of key identifier names not matching the number of key shares")
 		}
 	}
 
-	unsealMetadataEntry := &unsealMetadataStorageEntry{
-		Data: make(map[string]*UnsealKeyMetadata),
+	secretSharesMetadataValue := &secretSharesMetadataStorageValue{
+		Data: make(map[string]*KeyShareMetadata),
 	}
 
-	var keysMetadata []*UnsealKeyMetadata
+	var keySharesMetadata []*KeyShareMetadata
 
 	// Associate a UUID for each unseal key shard
-	for i, unsealKeyShard := range unsealKeyShares {
-		metadata := &UnsealKeyMetadata{}
-		unsealKeyUUID, err := uuid.GenerateUUID()
+	for i, keyShard := range keyShares {
+		metadata := &KeyShareMetadata{}
+		keyUUID, err := uuid.GenerateUUID()
 		if err != nil {
 			c.logger.Error("core: failed to generate unseal key identifier", "error", err)
 			return nil, nil, fmt.Errorf("failed to generate unseal key identifier: %v", err)
 		}
-		metadata.ID = unsealKeyUUID
+		metadata.ID = keyUUID
 
 		// Attach the name for the identifier if supplied
 		if len(identifierNames) > 0 {
 			metadata.Name = identifierNames[i]
 		}
 
-		unsealMetadataEntry.Data[base64.StdEncoding.EncodeToString(salt.SHA256Hash(unsealKeyShard))] = metadata
-		keysMetadata = append(keysMetadata, metadata)
+		secretSharesMetadataValue.Data[base64.StdEncoding.EncodeToString(salt.SHA256Hash(keyShard))] = metadata
+		keySharesMetadata = append(keySharesMetadata, metadata)
 	}
 
 	// JSON encode the unseal keys matadata
-	unsealMetadataJSON, err := jsonutil.EncodeJSON(unsealMetadataEntry)
+	secretSharesMetadataJSON, err := jsonutil.EncodeJSON(secretSharesMetadataValue)
 	if err != nil {
 		c.logger.Error("core: failed to encode unseal metadata", "error", err)
 		return nil, nil, err
 	}
 
-	return unsealMetadataJSON, keysMetadata, nil
+	return secretSharesMetadataJSON, keySharesMetadata, nil
 }
 
 // Initialize is used to initialize the Vault with the given
@@ -282,7 +282,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 
 	results := &InitResult{}
 
-	var unsealMetadataJSON []byte
+	var secretSharesMetadataJSON []byte
 
 	//
 	// Prepare metadata for each of the unseal key shards generated. Associate
@@ -292,7 +292,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 	//
 
 	// Associate metadata for all the unseal key shards
-	unsealMetadataJSON, results.KeysMetadata, err = c.prepareUnsealKeySharesMetadata(barrierShares.KeyShares, barrierConfig.KeyIdentifierNames)
+	secretSharesMetadataJSON, results.SecretSharesMetadata, err = c.prepareKeySharesMetadata(barrierShares.KeyShares, barrierConfig.KeyIdentifierNames)
 	if err != nil {
 		c.logger.Error("core: failed to prepare unseal key shards metadata", "error", err)
 		return nil, fmt.Errorf("failed to prepare unseal key shards metadata: %v", err)
@@ -357,8 +357,8 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 
 	// Now that the barrier is unsealed, persist the unseal metadata
 	err = c.barrier.Put(&Entry{
-		Key:   coreUnsealMetadataPath,
-		Value: unsealMetadataJSON,
+		Key:   coreSecretSharesMetadataPath,
+		Value: secretSharesMetadataJSON,
 	})
 	if err != nil {
 		c.logger.Error("core: failed to store unseal metadata", "error", err)
