@@ -326,7 +326,7 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 
 	// For BC compatibility, log the metadata information only if it is
 	// available
-	var secretSharesMetadataValue secretSharesMetadataStorageValue
+	var secretSharesMetadataValue keySharesMetadataStorageValue
 	if keySharesMetadataEntry != nil {
 		// Decode the unseal metadata information
 		if err = jsonutil.DecodeJSON(keySharesMetadataEntry.Value, &secretSharesMetadataValue); err != nil {
@@ -370,7 +370,6 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 		Backup: c.barrierRekeyConfig.Backup,
 	}
 
-	var keyShares [][]byte
 	if c.barrierRekeyConfig.SecretShares == 1 {
 		results.SecretShares = append(results.SecretShares, newMasterKey)
 	} else {
@@ -384,7 +383,7 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 	}
 
 	// Cache the unencrypted key shards to associate metadata to each
-	keyShares = results.SecretShares
+	keyShares := results.SecretShares
 
 	if len(c.barrierRekeyConfig.PGPKeys) > 0 {
 		hexEncodedShares := make([][]byte, len(results.SecretShares))
@@ -429,7 +428,7 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 
 	var secretSharesMetadataJSON []byte
 	// Associate metadata for all the unseal key shards
-	secretSharesMetadataJSON, results.SecretSharesMetadata, err = c.prepareKeySharesMetadata(keyShares, c.barrierRekeyConfig.KeyIdentifierNames)
+	secretSharesMetadataJSON, results.SecretSharesMetadata, err = c.prepareKeySharesMetadata(keyShares, c.barrierRekeyConfig.SecretSharesIdentifierNames)
 	if err != nil {
 		c.logger.Error("core: failed to prepare unseal key shards metadata during rekey", "error", err)
 		return nil, fmt.Errorf("failed to prepare unseal key shards metadata during rekey")
@@ -440,7 +439,7 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 		Value: secretSharesMetadataJSON,
 	})
 	if err != nil {
-		c.logger.Error("core: failed to store unseal metadata", "error", err)
+		c.logger.Error("core: failed to store unseal key shards metadata", "error", err)
 		return nil, err
 	}
 
@@ -605,6 +604,9 @@ func (c *Core) RecoveryRekeyUpdate(key []byte, nonce string) (*RekeyResult, erro
 		results.SecretShares = shares
 	}
 
+	// Cache the unencrypted key shards to associate metadata to each
+	keyShares := results.SecretShares
+
 	if len(c.recoveryRekeyConfig.PGPKeys) > 0 {
 		hexEncodedShares := make([][]byte, len(results.SecretShares))
 		for i, _ := range results.SecretShares {
@@ -644,6 +646,23 @@ func (c *Core) RecoveryRekeyUpdate(key []byte, nonce string) (*RekeyResult, erro
 				return nil, fmt.Errorf("failed to save unseal key backup: %v", err)
 			}
 		}
+	}
+
+	var recoverySharesMetadataJSON []byte
+	// Associate metadata for all the recovery key shards
+	recoverySharesMetadataJSON, results.SecretSharesMetadata, err = c.prepareKeySharesMetadata(keyShares, c.recoveryRekeyConfig.SecretSharesIdentifierNames)
+	if err != nil {
+		c.logger.Error("core: failed to prepare recovery key shards metadata during rekey", "error", err)
+		return nil, fmt.Errorf("failed to prepare recovery key shards metadata during rekey")
+	}
+
+	err = c.barrier.Put(&Entry{
+		Key:   coreRecoverySharesMetadataPath,
+		Value: recoverySharesMetadataJSON,
+	})
+	if err != nil {
+		c.logger.Error("core: failed to store rekey key shards metadata", "error", err)
+		return nil, err
 	}
 
 	if err := c.seal.SetRecoveryKey(newMasterKey); err != nil {

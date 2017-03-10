@@ -14,10 +14,15 @@ import (
 	"github.com/hashicorp/vault/shamir"
 )
 
-// secretSharesMetadataStorageValue holds metadata about all the unseal key shards.
+const (
+	unsealKeyIdentifiers   = "unseal-key-identifiers"
+	recoveryKeyIdentifiers = "recovery-key-identifiers"
+)
+
+// keySharesMetadataStorageValue holds metadata about all the unseal key shares.
 // This informaion is stored during the initialization and is fetched post
 // unseal for logging purposes.
-type secretSharesMetadataStorageValue struct {
+type keySharesMetadataStorageValue struct {
 	// Data is a map from each of the unseal key shard to its respective
 	// identifier.
 	Data map[string]*KeyShareMetadata `json:"data" structs:"data" mapstructure:"data"`
@@ -44,21 +49,22 @@ type InitParams struct {
 // InitResult is used to provide the key parts back after
 // they are generated as part of the initialization.
 type InitResult struct {
-	SecretShares         [][]byte
-	RecoveryShares       [][]byte
-	RootToken            string
-	SecretSharesMetadata []*KeyShareMetadata
+	SecretShares           [][]byte
+	RecoveryShares         [][]byte
+	RootToken              string
+	SecretSharesMetadata   []*KeyShareMetadata
+	RecoverySharesMetadata []*KeyShareMetadata
 }
 
-// InitKeyIdentifiersResponse contains the UUID identifiers associated with the
-// unseal key shards
-type InitKeyIdentifiersResponse struct {
+// InitKeySharesIdentifiersResponse contains the UUID identifiers associated with the
+// key shares.
+type InitKeySharesIdentifiersResponse struct {
 	KeyIdentifiers []*KeyShareMetadata
 }
 
 // GenerateSharesResult is used to provide the master key and its unseal key
-// shards. If PGP keys are used to encrypt the key shards this will also hold
-// the encrypted key shards and the PGP key fingerprint of the respective key
+// shares. If PGP keys are used to encrypt the key shares this will also hold
+// the encrypted key shares and the PGP key fingerprint of the respective key
 // that encrypted each shard.
 type GenerateSharesResult struct {
 	Key                   []byte
@@ -67,10 +73,21 @@ type GenerateSharesResult struct {
 	PGPEncryptedKeyShares [][]byte
 }
 
-// KeyIdentifiers returns the unique UUIDs associated with each of the unseal
-// key share. This enables key share holders to verify that the identifier of
-// the unseal key share given to them is actually valid.
-func (c *Core) KeyIdentifiers() (*InitKeyIdentifiersResponse, error) {
+// UnsealKeySharesIdentifiers returns the unique UUIDs associated with each of
+// the unseal key shares. This enables key share holders to verify that the
+// identifier of the unseal key share given to them is actually valid.
+func (c *Core) UnsealKeySharesIdentifiers() (*InitKeySharesIdentifiersResponse, error) {
+	return c.keyIdentifiers(unsealKeyIdentifiers)
+}
+
+// RecoveryKeySharesIdentifiers returns the unique UUIDs associated with each
+// of the recovery key shares. This enables key share holders to verify that the
+// identifier of the recovery key share given to them is actually valid.
+func (c *Core) RecoveryKeySharesIdentifiers() (*InitKeySharesIdentifiersResponse, error) {
+	return c.keyIdentifiers(recoveryKeyIdentifiers)
+}
+
+func (c *Core) keyIdentifiers(identifierType string) (*InitKeySharesIdentifiersResponse, error) {
 	if c.sealed {
 		return nil, consts.ErrSealed
 	}
@@ -78,21 +95,32 @@ func (c *Core) KeyIdentifiers() (*InitKeyIdentifiersResponse, error) {
 		return nil, consts.ErrStandby
 	}
 
-	entry, err := c.barrier.Get(coreSecretSharesMetadataPath)
+	var path string
+	switch identifierType {
+	case unsealKeyIdentifiers:
+		path = coreSecretSharesMetadataPath
+	case recoveryKeyIdentifiers:
+		path = coreRecoverySharesMetadataPath
+	default:
+		return nil, fmt.Errorf("invalid key identifier type %q", identifierType)
+
+	}
+
+	entry, err := c.barrier.Get(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch unseal metadata entry: %v", err)
+		return nil, fmt.Errorf("failed to fetch %s: %v", identifierType, err)
 	}
 	if entry == nil {
 		return nil, nil
 	}
 
-	var secretSharesMetadataValue secretSharesMetadataStorageValue
-	if err = jsonutil.DecodeJSON(entry.Value, &secretSharesMetadataValue); err != nil {
+	var keySharesMetadataValue keySharesMetadataStorageValue
+	if err = jsonutil.DecodeJSON(entry.Value, &keySharesMetadataValue); err != nil {
 		return nil, fmt.Errorf("failed to decode unseal metadata entry: %v", err)
 	}
 
-	response := &InitKeyIdentifiersResponse{}
-	for _, keyShareMetadata := range secretSharesMetadataValue.Data {
+	response := &InitKeySharesIdentifiersResponse{}
+	for _, keyShareMetadata := range keySharesMetadataValue.Data {
 		if keyShareMetadata == nil || keyShareMetadata.ID == "" {
 			return nil, fmt.Errorf("invalid unseal metadata entry in storage")
 		}
@@ -149,7 +177,7 @@ func (c *Core) generateShares(sc *SealConfig) (*GenerateSharesResult, error) {
 		}
 	}
 
-	// If PGP keys are supplied, encrypt the key shards with respective PGP key
+	// If PGP keys are supplied, encrypt the key shares with respective PGP key
 	var pgpEncryptedKeyShares [][]byte
 	var pgpKeyFingerprints []string
 	if len(sc.PGPKeys) > 0 {
@@ -171,9 +199,9 @@ func (c *Core) generateShares(sc *SealConfig) (*GenerateSharesResult, error) {
 	}, nil
 }
 
-// prepareKeySharesMetadata takes in the unseal key shards, both
+// prepareKeySharesMetadata takes in the unseal key shares, both
 // encrypted and unencrypted, associates identifiers for each key shard and
-// JSON encodes it. Identifier for unencrypted key shards will be UUIDs.
+// JSON encodes it. Identifier for unencrypted key shares will be UUIDs.
 func (c *Core) prepareKeySharesMetadata(keyShares [][]byte, keyIdentifierNames string) ([]byte, []*KeyShareMetadata, error) {
 	// If keyIdentifierNames are supplied, parse them
 	var identifierNames []string
@@ -186,7 +214,7 @@ func (c *Core) prepareKeySharesMetadata(keyShares [][]byte, keyIdentifierNames s
 		}
 	}
 
-	secretSharesMetadataValue := &secretSharesMetadataStorageValue{
+	keySharesMetadataValue := &keySharesMetadataStorageValue{
 		Data: make(map[string]*KeyShareMetadata),
 	}
 
@@ -207,18 +235,18 @@ func (c *Core) prepareKeySharesMetadata(keyShares [][]byte, keyIdentifierNames s
 			metadata.Name = identifierNames[i]
 		}
 
-		secretSharesMetadataValue.Data[base64.StdEncoding.EncodeToString(salt.SHA256Hash(keyShard))] = metadata
+		keySharesMetadataValue.Data[base64.StdEncoding.EncodeToString(salt.SHA256Hash(keyShard))] = metadata
 		keySharesMetadata = append(keySharesMetadata, metadata)
 	}
 
-	// JSON encode the unseal keys matadata
-	secretSharesMetadataJSON, err := jsonutil.EncodeJSON(secretSharesMetadataValue)
+	// JSON encode the key shares matadata
+	keySharesMetadataJSON, err := jsonutil.EncodeJSON(keySharesMetadataValue)
 	if err != nil {
-		c.logger.Error("core: failed to encode unseal metadata", "error", err)
+		c.logger.Error("core: failed to encode key shares metadata", "error", err)
 		return nil, nil, err
 	}
 
-	return secretSharesMetadataJSON, keySharesMetadata, nil
+	return keySharesMetadataJSON, keySharesMetadata, nil
 }
 
 // Initialize is used to initialize the Vault with the given
@@ -285,20 +313,20 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 	var secretSharesMetadataJSON []byte
 
 	//
-	// Prepare metadata for each of the unseal key shards generated. Associate
-	// the metatada with plaintext unseal key shards and not the PGP encrypted
-	// key shards. Metadata should be created for all the key shards and hence
+	// Prepare metadata for each of the unseal key shares generated. Associate
+	// the metatada with plaintext unseal key shares and not the PGP encrypted
+	// key shares. Metadata should be created for all the key shares and hence
 	// this should be done before processing stored keys.
 	//
 
-	// Associate metadata for all the unseal key shards
-	secretSharesMetadataJSON, results.SecretSharesMetadata, err = c.prepareKeySharesMetadata(barrierShares.KeyShares, barrierConfig.KeyIdentifierNames)
+	// Associate metadata for all the unseal key shares
+	secretSharesMetadataJSON, results.SecretSharesMetadata, err = c.prepareKeySharesMetadata(barrierShares.KeyShares, barrierConfig.SecretSharesIdentifierNames)
 	if err != nil {
-		c.logger.Error("core: failed to prepare unseal key shards metadata", "error", err)
-		return nil, fmt.Errorf("failed to prepare unseal key shards metadata: %v", err)
+		c.logger.Error("core: failed to prepare unseal key shares metadata", "error", err)
+		return nil, fmt.Errorf("failed to prepare unseal key shares metadata: %v", err)
 	}
 
-	// Determine whether to return plaintext unseal key shards or its PGP
+	// Determine whether to return plaintext unseal key shares or its PGP
 	// encrypted counterparts
 	var returnedKeys [][]byte
 	switch {
@@ -355,7 +383,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 		}
 	}()
 
-	// Now that the barrier is unsealed, persist the unseal metadata
+	// Now that the barrier is unsealed, persist the unseal shares metadata
 	err = c.barrier.Put(&Entry{
 		Key:   coreSecretSharesMetadataPath,
 		Value: secretSharesMetadataJSON,
@@ -397,12 +425,30 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 				return nil, err
 			}
 
+			// Associate metadata for all the recovery key shares
+			var recoverySharesMetadataJSON []byte
+			recoverySharesMetadataJSON, results.RecoverySharesMetadata, err = c.prepareKeySharesMetadata(recoveryShares.KeyShares, recoveryConfig.SecretSharesIdentifierNames)
+			if err != nil {
+				c.logger.Error("core: failed to prepare recovery key shares metadata", "error", err)
+				return nil, fmt.Errorf("failed to prepare recovery key shares metadata: %v", err)
+			}
+
+			err = c.barrier.Put(&Entry{
+				Key:   coreRecoverySharesMetadataPath,
+				Value: recoverySharesMetadataJSON,
+			})
+			if err != nil {
+				c.logger.Error("core: failed to store recovery shares metadata", "error", err)
+				return nil, err
+			}
+
 			switch {
 			case len(recoveryShares.PGPEncryptedKeyShares) > 0:
 				results.RecoveryShares = recoveryShares.PGPEncryptedKeyShares
 			default:
 				results.RecoveryShares = recoveryShares.KeyShares
 			}
+
 		}
 	}
 

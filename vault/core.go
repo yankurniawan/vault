@@ -68,6 +68,10 @@ const (
 	// unseal key shards.
 	coreSecretSharesMetadataPath = "core/secret_shares_metadata"
 
+	// coreRecoverySharesMetadataPath is the path used to store the metadata about
+	// recovery key shards.
+	coreRecoverySharesMetadataPath = "core/recovery_shares_metadata"
+
 	// coreKeyringCanaryPath is used as a canary to indicate to replicated
 	// clusters that they need to perform a rekey operation synchronously; this
 	// isn't keyring-canary to avoid ignoring it when ignoring core/keyring
@@ -915,7 +919,7 @@ func (c *Core) unsealInternal(masterKey []byte) (bool, error) {
 
 	// For BC compatibility, log the metadata information only if it is
 	// available
-	var secretSharesMetadataValue secretSharesMetadataStorageValue
+	var secretSharesMetadataValue keySharesMetadataStorageValue
 	if keySharesMetadataEntry != nil {
 		// Decode the unseal metadata information
 		if err = jsonutil.DecodeJSON(keySharesMetadataEntry.Value, &secretSharesMetadataValue); err != nil {
@@ -935,12 +939,12 @@ func (c *Core) unsealInternal(masterKey []byte) (bool, error) {
 
 			switch {
 			case secretShareMetadata.ID != "" && secretShareMetadata.Name != "":
-				c.logger.Info(fmt.Sprintf("core: unseal key with identifier %q with name %q supplied for unsealing", secretShareMetadata.ID, secretShareMetadata.Name))
+				c.logger.Info(fmt.Sprintf("core: unseal key share with identifier %q and name %q supplied for unsealing", secretShareMetadata.ID, secretShareMetadata.Name))
 			case secretShareMetadata.ID != "":
-				c.logger.Info(fmt.Sprintf("core: unseal key with identifier %q supplied for unsealing", secretShareMetadata.ID))
+				c.logger.Info(fmt.Sprintf("core: unseal key share with identifier %q supplied for unsealing", secretShareMetadata.ID))
 			default:
-				c.logger.Error("core: missing unseal key shard metadata")
-				return false, fmt.Errorf("missing unseal key shard metadata")
+				c.logger.Error("core: missing unseal key share metadata")
+				return false, fmt.Errorf("missing unseal key share metadata")
 			}
 		}
 	}

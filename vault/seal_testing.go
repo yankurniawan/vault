@@ -140,10 +140,10 @@ func testCoreUnsealedWithConfigs(t *testing.T, barrierConf, recoveryConf *SealCo
 
 func testSealDefConfigs() (*SealConfig, *SealConfig) {
 	return &SealConfig{
-			SecretShares:       5,
-			SecretThreshold:    3,
-			StoredShares:       2,
-			KeyIdentifierNames: "first,second,third,forth,fifth",
+			SecretShares:                5,
+			SecretThreshold:             3,
+			StoredShares:                2,
+			SecretSharesIdentifierNames: "first,second,third,forth,fifth",
 		}, &SealConfig{
 			SecretShares:    5,
 			SecretThreshold: 3,

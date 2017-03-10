@@ -10,17 +10,17 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-func handleSysInitKeyIdentifiers(core *vault.Core) http.Handler {
+func handleSysInitUnsealKeyIdentifiers(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "GET":
-			result, err := core.KeyIdentifiers()
+			result, err := core.UnsealKeySharesIdentifiers()
 			if err != nil {
 				respondError(w, http.StatusInternalServerError, err)
 				return
 			}
 
-			identifiers := &InitKeyIdentifiersResponse{}
+			identifiers := &InitKeySharesIdentifiersResponse{}
 			for _, identifier := range result.KeyIdentifiers {
 				identifiers.KeyIdentifiers = append(identifiers.KeyIdentifiers, &KeyShareMetadata{
 					ID:   identifier.ID,
@@ -69,17 +69,18 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 
 	// Initialize
 	barrierConfig := &vault.SealConfig{
-		SecretShares:       req.SecretShares,
-		SecretThreshold:    req.SecretThreshold,
-		StoredShares:       req.StoredShares,
-		PGPKeys:            req.PGPKeys,
-		KeyIdentifierNames: req.KeyIdentifierNames,
+		SecretShares:                req.SecretShares,
+		SecretThreshold:             req.SecretThreshold,
+		StoredShares:                req.StoredShares,
+		PGPKeys:                     req.PGPKeys,
+		SecretSharesIdentifierNames: req.SecretSharesIdentifierNames,
 	}
 
 	recoveryConfig := &vault.SealConfig{
-		SecretShares:    req.RecoveryShares,
-		SecretThreshold: req.RecoveryThreshold,
-		PGPKeys:         req.RecoveryPGPKeys,
+		SecretShares:                req.RecoveryShares,
+		SecretThreshold:             req.RecoveryThreshold,
+		PGPKeys:                     req.RecoveryPGPKeys,
+		SecretSharesIdentifierNames: req.RecoverySharesIdentifierNames,
 	}
 
 	if core.SealAccess().StoredKeysSupported() {
@@ -173,20 +174,21 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 	respondOk(w, resp)
 }
 
-type InitKeyIdentifiersResponse struct {
+type InitKeySharesIdentifiersResponse struct {
 	KeyIdentifiers []*KeyShareMetadata `json:"key_identifiers"`
 }
 
 type InitRequest struct {
-	SecretShares       int      `json:"secret_shares"`
-	SecretThreshold    int      `json:"secret_threshold"`
-	StoredShares       int      `json:"stored_shares"`
-	PGPKeys            []string `json:"pgp_keys"`
-	RecoveryShares     int      `json:"recovery_shares"`
-	RecoveryThreshold  int      `json:"recovery_threshold"`
-	RecoveryPGPKeys    []string `json:"recovery_pgp_keys"`
-	RootTokenPGPKey    string   `json:"root_token_pgp_key"`
-	KeyIdentifierNames string   `json:"key_identifier_names"`
+	SecretShares                  int      `json:"secret_shares"`
+	SecretThreshold               int      `json:"secret_threshold"`
+	StoredShares                  int      `json:"stored_shares"`
+	PGPKeys                       []string `json:"pgp_keys"`
+	RecoveryShares                int      `json:"recovery_shares"`
+	RecoveryThreshold             int      `json:"recovery_threshold"`
+	RecoveryPGPKeys               []string `json:"recovery_pgp_keys"`
+	RootTokenPGPKey               string   `json:"root_token_pgp_key"`
+	SecretSharesIdentifierNames   string   `json:"secret_shares_identifier_names"`
+	RecoverySharesIdentifierNames string   `json:"recovery_shares_identifier_names"`
 }
 
 type InitResponse struct {

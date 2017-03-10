@@ -23,7 +23,7 @@ func (c *InitCommand) Run(args []string) int {
 	var threshold, shares, storedShares, recoveryThreshold, recoveryShares int
 	var pgpKeys, recoveryPgpKeys, rootTokenPgpKey pgpkeys.PubKeyFilesFlag
 	var auto, check bool
-	var consulServiceName, keyIdentifierNames string
+	var consulServiceName, secretSharesIdentifierNames, recoverySharesIdentifierNames string
 	flags := c.Meta.FlagSet("init", meta.FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	flags.IntVar(&shares, "key-shares", 5, "")
@@ -37,20 +37,22 @@ func (c *InitCommand) Run(args []string) int {
 	flags.BoolVar(&check, "check", false, "")
 	flags.BoolVar(&auto, "auto", false, "")
 	flags.StringVar(&consulServiceName, "consul-service", physical.DefaultServiceName, "")
-	flags.StringVar(&keyIdentifierNames, "key-identifier-names", "", "")
+	flags.StringVar(&secretSharesIdentifierNames, "key-shares-identifier-names", "", "")
+	flags.StringVar(&recoverySharesIdentifierNames, "recovery-shares-identifier-names", "", "")
 	if err := flags.Parse(args); err != nil {
 		return 1
 	}
 
 	initRequest := &api.InitRequest{
-		SecretShares:       shares,
-		SecretThreshold:    threshold,
-		StoredShares:       storedShares,
-		PGPKeys:            pgpKeys,
-		RecoveryShares:     recoveryShares,
-		RecoveryThreshold:  recoveryThreshold,
-		RecoveryPGPKeys:    recoveryPgpKeys,
-		KeyIdentifierNames: keyIdentifierNames,
+		SecretShares:                  shares,
+		SecretThreshold:               threshold,
+		StoredShares:                  storedShares,
+		PGPKeys:                       pgpKeys,
+		RecoveryShares:                recoveryShares,
+		RecoveryThreshold:             recoveryThreshold,
+		RecoveryPGPKeys:               recoveryPgpKeys,
+		SecretSharesIdentifierNames:   secretSharesIdentifierNames,
+		RecoverySharesIdentifierNames: recoverySharesIdentifierNames,
 	}
 
 	switch len(rootTokenPgpKey) {
@@ -344,7 +346,8 @@ Init Options:
   -key-threshold=3          The number of key shares required to reconstruct
                             the master key.
 
-  -key-identifier-names     If provided, must be a comma-separated list of names
+  -key-shares-identifier-names
+                            If provided, must be a comma-separated list of names
                             to be associated with the unseal key identifiers. The
                             number of unique names supplied should match the value
                             of 'key-threshold'.
@@ -379,6 +382,12 @@ Init Options:
 
   -recovery-threshold=3     The number of key shares required to reconstruct
                             the recovery key. Only used with Vault HSM.
+
+  -recovery-shares-identifier-names
+                            If provided, must be a comma-separated list of names
+                            to be associated with the unseal key identifiers. The
+                            number of unique names supplied should match the value
+                            of 'recovery-threshold'.
 
   -recovery-pgp-keys        If provided, behaves like "pgp-keys" but for the
                             recovery key shares. Only used with Vault HSM.
