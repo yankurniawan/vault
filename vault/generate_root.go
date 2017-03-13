@@ -250,32 +250,31 @@ func (c *Core) GenerateRootUpdate(key []byte, nonce string) (*GenerateRootResult
 
 	// For BC compatibility, log the metadata information only if it is
 	// available
-	var secretSharesMetadataValue keySharesMetadataStorageValue
+	var keySharesMetadataValue keySharesMetadataStorageValue
 	if keySharesMetadataEntry != nil {
-		// Decode the unseal metadata information
-		if err = jsonutil.DecodeJSON(keySharesMetadataEntry.Value, &secretSharesMetadataValue); err != nil {
+		if err = jsonutil.DecodeJSON(keySharesMetadataEntry.Value, &keySharesMetadataValue); err != nil {
 			return nil, fmt.Errorf("failed to decode key shares metadata entry: %v", err)
 		}
 
 		for _, unlockPart := range c.generateRootProgress {
-			// Fetch the metadata associated to the unseal key shard
-			secretShareMetadata, _ := secretSharesMetadataValue.Data[base64.StdEncoding.EncodeToString(salt.SHA256Hash(unlockPart))]
+			// Fetch the metadata associated with the key share
+			secretShareMetadata, ok := keySharesMetadataValue.Data[base64.StdEncoding.EncodeToString(salt.SHA256Hash(unlockPart))]
 
-			// Ideally we need to error out if key metadata is not available.
-			// When this code path is hit with recovery keys there won't be
-			// matching key metadata against it. Hence checking it for not being
-			// nil.
+			// If the storage entry is successfully read, metadata associated
+			// with all the key shares must be available.
+			if !ok || secretShareMetadata == nil {
+				c.logger.Error("core: failed to fetch key share metadata")
+				return nil, fmt.Errorf("failed to fetch key share metadata")
+			}
 
-			if secretShareMetadata != nil {
-				switch {
-				case secretShareMetadata.ID != "" && secretShareMetadata.Name != "":
-					c.logger.Info(fmt.Sprintf("core: key share with identifier %q and name %q supplied for generating root token", secretShareMetadata.ID, secretShareMetadata.Name))
-				case secretShareMetadata.ID != "":
-					c.logger.Info(fmt.Sprintf("core: key share with identifier %q supplied for generating root token", secretShareMetadata.ID))
-				default:
-					c.logger.Error("core: missing key share metadata while generating root token")
-					return nil, fmt.Errorf("missing key share metadata while generating root token")
-				}
+			switch {
+			case secretShareMetadata.ID != "" && secretShareMetadata.Name != "":
+				c.logger.Info(fmt.Sprintf("core: key share with identifier %q and name %q supplied for generating root token", secretShareMetadata.ID, secretShareMetadata.Name))
+			case secretShareMetadata.ID != "":
+				c.logger.Info(fmt.Sprintf("core: key share with identifier %q supplied for generating root token", secretShareMetadata.ID))
+			default:
+				c.logger.Error("core: missing key share metadata while generating root token")
+				return nil, fmt.Errorf("missing key share metadata while generating root token")
 			}
 		}
 	}

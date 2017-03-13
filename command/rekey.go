@@ -30,7 +30,7 @@ type RekeyCommand struct {
 func (c *RekeyCommand) Run(args []string) int {
 	var init, cancel, status, delete, retrieve, backup, recoveryKey bool
 	var shares, threshold int
-	var nonce, keyIdentifierNames string
+	var nonce, keySharesIdentifierNames string
 	var pgpKeys pgpkeys.PubKeyFilesFlag
 	flags := c.Meta.FlagSet("rekey", meta.FlagSetDefault)
 	flags.BoolVar(&init, "init", false, "")
@@ -43,7 +43,7 @@ func (c *RekeyCommand) Run(args []string) int {
 	flags.IntVar(&shares, "key-shares", 5, "")
 	flags.IntVar(&threshold, "key-threshold", 3, "")
 	flags.StringVar(&nonce, "nonce", "", "")
-	flags.StringVar(&keyIdentifierNames, "key-identifier-names", "", "")
+	flags.StringVar(&keySharesIdentifierNames, "key-shares-identifier-names", "", "")
 	flags.Var(&pgpKeys, "pgp-keys", "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
@@ -64,7 +64,7 @@ func (c *RekeyCommand) Run(args []string) int {
 	// Check if we are running doing any restricted variants
 	switch {
 	case init:
-		return c.initRekey(client, shares, threshold, pgpKeys, backup, recoveryKey, keyIdentifierNames)
+		return c.initRekey(client, shares, threshold, pgpKeys, backup, recoveryKey, keySharesIdentifierNames)
 	case cancel:
 		return c.cancelRekey(client, recoveryKey)
 	case status:
@@ -91,18 +91,19 @@ func (c *RekeyCommand) Run(args []string) int {
 	if !rekeyStatus.Started {
 		if recoveryKey {
 			rekeyStatus, err = client.Sys().RekeyRecoveryKeyInit(&api.RekeyInitRequest{
-				SecretShares:    shares,
-				SecretThreshold: threshold,
-				PGPKeys:         pgpKeys,
-				Backup:          backup,
+				SecretShares:             shares,
+				SecretThreshold:          threshold,
+				KeySharesIdentifierNames: keySharesIdentifierNames,
+				PGPKeys:                  pgpKeys,
+				Backup:                   backup,
 			})
 		} else {
 			rekeyStatus, err = client.Sys().RekeyInit(&api.RekeyInitRequest{
-				SecretShares:       shares,
-				SecretThreshold:    threshold,
-				KeyIdentifierNames: keyIdentifierNames,
-				PGPKeys:            pgpKeys,
-				Backup:             backup,
+				SecretShares:             shares,
+				SecretThreshold:          threshold,
+				KeySharesIdentifierNames: keySharesIdentifierNames,
+				PGPKeys:                  pgpKeys,
+				Backup:                   backup,
 			})
 		}
 		if err != nil {
@@ -233,14 +234,14 @@ func (c *RekeyCommand) Run(args []string) int {
 func (c *RekeyCommand) initRekey(client *api.Client,
 	shares, threshold int,
 	pgpKeys pgpkeys.PubKeyFilesFlag,
-	backup, recoveryKey bool, keyIdentifierNames string) int {
+	backup, recoveryKey bool, keySharesIdentifierNames string) int {
 	// Start the rekey
 	request := &api.RekeyInitRequest{
-		SecretShares:       shares,
-		SecretThreshold:    threshold,
-		PGPKeys:            pgpKeys,
-		Backup:             backup,
-		KeyIdentifierNames: keyIdentifierNames,
+		SecretShares:    shares,
+		SecretThreshold: threshold,
+		PGPKeys:         pgpKeys,
+		Backup:          backup,
+		KeySharesIdentifierNames: keySharesIdentifierNames,
 	}
 	var status *api.RekeyStatusResponse
 	var err error
@@ -412,6 +413,13 @@ Rekey Options:
 
   -key-threshold=3        The number of key shares required to reconstruct
                           the master key.
+
+  -key-shares-identifier-names
+                          If provided, must be a comma-separated list of names
+                          to be associated with the unseal key identifiers. The
+                          number of unique names supplied should match the value
+                          of 'key-threshold'.
+
 
   -nonce=abcd             The nonce provided at rekey initialization time. This
                           same nonce value must be provided with each unseal

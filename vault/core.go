@@ -931,7 +931,7 @@ func (c *Core) unsealInternal(masterKey []byte) (bool, error) {
 			secretShareMetadata, ok := secretSharesMetadataValue.Data[base64.StdEncoding.EncodeToString(salt.SHA256Hash(unlockPart))]
 
 			// If the storage entry is successfully read, metadata associated
-			// with all the unseal keys must be available.
+			// with all the unseal key shares must be available.
 			if !ok || secretShareMetadata == nil {
 				c.logger.Error("core: failed to fetch unseal key metadata")
 				return false, fmt.Errorf("failed to fetch unseal key metadata")
