@@ -238,7 +238,7 @@ func (c *InitCommand) runInit(check bool, initRequest *api.InitRequest) int {
 
 	if len(resp.SecretSharesMetadata) > 0 {
 		if len(resp.Keys) != len(resp.SecretSharesMetadata) {
-			c.Ui.Error("Number of keys returned is not matching the number of key metadata items")
+			c.Ui.Error("Number of key shares returned is not matching the number of key shares metadata items")
 			return 1
 		}
 
@@ -249,7 +249,7 @@ func (c *InitCommand) runInit(check bool, initRequest *api.InitRequest) int {
 			case secretShareMetadata.ID != "":
 				c.Ui.Output(fmt.Sprintf("Unseal Key Identifier %d: %s", i+1, secretShareMetadata.ID))
 			default:
-				c.Ui.Error("Invalid key metadata")
+				c.Ui.Error("Invalid unseal key shares metadata")
 				return 1
 			}
 		}
@@ -260,6 +260,25 @@ func (c *InitCommand) runInit(check bool, initRequest *api.InitRequest) int {
 			c.Ui.Output(fmt.Sprintf("Recovery Key %d: %s", i+1, resp.RecoveryKeysB64[i]))
 		} else {
 			c.Ui.Output(fmt.Sprintf("Recovery Key %d: %s", i+1, key))
+		}
+
+		if len(resp.RecoverySharesMetadata) > 0 {
+			if len(resp.Keys) != len(resp.RecoverySharesMetadata) {
+				c.Ui.Error("Number of recovery key shares returned is not matching the number of recovery key shares metadata items")
+				return 1
+			}
+
+			for i, recoveryShareMetadata := range resp.RecoverySharesMetadata {
+				switch {
+				case recoveryShareMetadata.ID != "" && recoveryShareMetadata.Name != "":
+					c.Ui.Output(fmt.Sprintf("Recovery Key Identifier %d with name %q: %s", i+1, recoveryShareMetadata.Name, recoveryShareMetadata.ID))
+				case recoveryShareMetadata.ID != "":
+					c.Ui.Output(fmt.Sprintf("Recovery Key Identifier %d: %s", i+1, recoveryShareMetadata.ID))
+				default:
+					c.Ui.Error("Invalid recovery key shares metadata")
+					return 1
+				}
+			}
 		}
 	}
 

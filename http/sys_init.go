@@ -160,6 +160,16 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 
 	resp.SecretSharesMetadata = keySharesMetadata
 
+	keySharesMetadata = nil
+	for _, keyShareMetadata := range result.RecoverySharesMetadata {
+		keySharesMetadata = append(keySharesMetadata, &KeyShareMetadata{
+			Name: keyShareMetadata.Name,
+			ID:   keyShareMetadata.ID,
+		})
+	}
+
+	resp.RecoverySharesMetadata = keySharesMetadata
+
 	if len(result.RecoveryShares) > 0 {
 		resp.RecoveryKeys = make([]string, 0, len(result.RecoveryShares))
 		resp.RecoveryKeysB64 = make([]string, 0, len(result.RecoveryShares))
@@ -192,12 +202,13 @@ type InitRequest struct {
 }
 
 type InitResponse struct {
-	Keys                 []string            `json:"keys"`
-	KeysB64              []string            `json:"keys_base64"`
-	RecoveryKeys         []string            `json:"recovery_keys,omitempty"`
-	RecoveryKeysB64      []string            `json:"recovery_keys_base64,omitempty"`
-	RootToken            string              `json:"root_token"`
-	SecretSharesMetadata []*KeyShareMetadata `json:"secret_shares_metadata"`
+	Keys                   []string            `json:"keys"`
+	KeysB64                []string            `json:"keys_base64"`
+	RecoveryKeys           []string            `json:"recovery_keys,omitempty"`
+	RecoveryKeysB64        []string            `json:"recovery_keys_base64,omitempty"`
+	RootToken              string              `json:"root_token"`
+	SecretSharesMetadata   []*KeyShareMetadata `json:"secret_shares_metadata"`
+	RecoverySharesMetadata []*KeyShareMetadata `json:"recovery_shares_metadata"`
 }
 
 type KeyShareMetadata struct {

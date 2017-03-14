@@ -48,12 +48,13 @@ type InitStatusResponse struct {
 }
 
 type InitResponse struct {
-	Keys                 []string            `json:"keys"`
-	KeysB64              []string            `json:"keys_base64"`
-	RecoveryKeys         []string            `json:"recovery_keys"`
-	RecoveryKeysB64      []string            `json:"recovery_keys_base64"`
-	RootToken            string              `json:"root_token"`
-	SecretSharesMetadata []*KeyShareMetadata `json:"secret_shares_metadata"`
+	Keys                   []string            `json:"keys"`
+	KeysB64                []string            `json:"keys_base64"`
+	RecoveryKeys           []string            `json:"recovery_keys"`
+	RecoveryKeysB64        []string            `json:"recovery_keys_base64"`
+	RootToken              string              `json:"root_token"`
+	SecretSharesMetadata   []*KeyShareMetadata `json:"secret_shares_metadata"`
+	RecoverySharesMetadata []*KeyShareMetadata `json:"recovery_shares_metadata"`
 }
 
 type KeyShareMetadata struct {
