@@ -122,8 +122,8 @@ func TestSysInit_KeyIdentifiersCase1(t *testing.T) {
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	var actual InitKeyIdentifiersResponse
-	resp := testHttpGet(t, token, addr+"/v1/sys/init/key-identifiers")
+	var actual InitKeySharesIdentifiersResponse
+	resp := testHttpGet(t, token, addr+"/v1/sys/init/unseal-shares-identifiers")
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 
@@ -145,8 +145,8 @@ func TestSysInit_KeyIdentifiersCase2(t *testing.T) {
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	var actual InitKeyIdentifiersResponse
-	resp := testHttpGet(t, token, addr+"/v1/sys/init/key-identifiers")
+	var actual InitKeySharesIdentifiersResponse
+	resp := testHttpGet(t, token, addr+"/v1/sys/init/unseal-key-identifiers")
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 
@@ -176,9 +176,9 @@ func TestSysInit_SecretSharesMetadataKeyIdentifierNames(t *testing.T) {
 
 	// basic case of getting unseal metadata back
 	initInput := map[string]interface{}{
-		"secret_shares":        5,
-		"secret_threshold":     3,
-		"key_identifier_names": "first,second,third,forth,fifth",
+		"secret_shares":                  5,
+		"secret_threshold":               3,
+		"secret_shares_identifier_names": "first,second,third,forth,fifth",
 	}
 
 	// set the key identifier names and check if the associated metadata has

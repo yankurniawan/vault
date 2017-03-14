@@ -216,9 +216,9 @@ func TestSysRekey_SecretSharesMetadataKeyIdentifierNames(t *testing.T) {
 	TestServerAuth(t, addr, token)
 
 	resp := testHttpPut(t, token, addr+"/v1/sys/rekey/init", map[string]interface{}{
-		"secret_shares":        5,
-		"secret_threshold":     3,
-		"key_identifier_names": "first,second,third,forth,fifth",
+		"secret_shares":               5,
+		"secret_threshold":            3,
+		"key_shares_identifier_names": "first,second,third,forth,fifth",
 	})
 	var rekeyStatus map[string]interface{}
 	testResponseStatus(t, resp, 200)
