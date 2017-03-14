@@ -16,6 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/helper/awsutil"
 )
 
@@ -76,6 +77,7 @@ func newS3Backend(conf map[string]string, logger log.Logger) (Backend, error) {
 
 	s3conn := s3.New(session.New(&aws.Config{
 		Credentials: creds,
+		HTTPClient:  cleanhttp.DefaultPooledClient(),
 		Endpoint:    aws.String(endpoint),
 		Region:      aws.String(region),
 	}))
