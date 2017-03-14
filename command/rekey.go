@@ -183,20 +183,20 @@ func (c *RekeyCommand) Run(args []string) int {
 		}
 	}
 
-	if len(result.SecretSharesMetadata) > 0 {
-		if len(result.Keys) != len(result.SecretSharesMetadata) {
-			c.Ui.Error("Number of keys returned is not matching the number of keys metadata")
+	if len(result.KeySharesMetadata) > 0 {
+		if len(result.Keys) != len(result.KeySharesMetadata) {
+			c.Ui.Error("Number of key shares returned is not matching the number of key shares metadata")
 			return 1
 		}
 
-		for i, secretShareMetadata := range result.SecretSharesMetadata {
+		for i, keyShareMetadata := range result.KeySharesMetadata {
 			switch {
-			case secretShareMetadata.ID != "" && secretShareMetadata.Name != "":
-				c.Ui.Output(fmt.Sprintf("Unseal Key Identifier %d with name %q: %s", i+1, secretShareMetadata.Name, secretShareMetadata.ID))
-			case secretShareMetadata.ID != "":
-				c.Ui.Output(fmt.Sprintf("Unseal Key Identifier %d: %s", i+1, secretShareMetadata.ID))
+			case keyShareMetadata.ID != "" && keyShareMetadata.Name != "":
+				c.Ui.Output(fmt.Sprintf("Key share identifier %d with name %q: %s", i+1, keyShareMetadata.Name, keyShareMetadata.ID))
+			case keyShareMetadata.ID != "":
+				c.Ui.Output(fmt.Sprintf("Key share identifier %d: %s", i+1, keyShareMetadata.ID))
 			default:
-				c.Ui.Error("Invalid key metadata")
+				c.Ui.Error("Invalid key shares metadata")
 				return 1
 			}
 		}
@@ -416,7 +416,7 @@ Rekey Options:
 
   -key-shares-identifier-names
                           If provided, must be a comma-separated list of names
-                          to be associated with the unseal key identifiers. The
+                          to be associated with the key shares identifiers. The
                           number of unique names supplied should match the value
                           of 'key-threshold'.
 

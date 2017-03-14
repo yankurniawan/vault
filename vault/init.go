@@ -73,21 +73,10 @@ type GenerateSharesResult struct {
 	PGPEncryptedKeyShares [][]byte
 }
 
-// UnsealKeySharesIdentifiers returns the unique UUIDs associated with each of
-// the unseal key shares. This enables key share holders to verify that the
-// identifier of the unseal key share given to them is actually valid.
-func (c *Core) UnsealKeySharesIdentifiers() (*InitKeySharesIdentifiersResponse, error) {
-	return c.keyIdentifiers(unsealKeyIdentifiers)
-}
-
-// RecoveryKeySharesIdentifiers returns the unique UUIDs associated with each
-// of the recovery key shares. This enables key share holders to verify that the
-// identifier of the recovery key share given to them is actually valid.
-func (c *Core) RecoveryKeySharesIdentifiers() (*InitKeySharesIdentifiersResponse, error) {
-	return c.keyIdentifiers(recoveryKeyIdentifiers)
-}
-
-func (c *Core) keyIdentifiers(identifierType string) (*InitKeySharesIdentifiersResponse, error) {
+// KeySharesIdentifiers returns the unique UUIDs associated with each of the
+// key shares. This enables key share holders to verify that the identifier of
+// the unseal/recovery key share given to them is actually valid.
+func (c *Core) KeySharesIdentifiers(recovery bool) (*InitKeySharesIdentifiersResponse, error) {
 	if c.sealed {
 		return nil, consts.ErrSealed
 	}
@@ -96,19 +85,15 @@ func (c *Core) keyIdentifiers(identifierType string) (*InitKeySharesIdentifiersR
 	}
 
 	var path string
-	switch identifierType {
-	case unsealKeyIdentifiers:
-		path = coreSecretSharesMetadataPath
-	case recoveryKeyIdentifiers:
+	if recovery {
 		path = coreRecoverySharesMetadataPath
-	default:
-		return nil, fmt.Errorf("invalid key identifier type %q", identifierType)
-
+	} else {
+		path = coreSecretSharesMetadataPath
 	}
 
 	entry, err := c.barrier.Get(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch %s: %v", identifierType, err)
+		return nil, fmt.Errorf("failed to fetch key shares metadata: %v", err)
 	}
 	if entry == nil {
 		return nil, nil

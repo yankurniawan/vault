@@ -10,11 +10,11 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-func handleSysInitUnsealKeyIdentifiers(core *vault.Core) http.Handler {
+func handleSysInitKeySharesIdentifiers(core *vault.Core, recovery bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "GET":
-			result, err := core.UnsealKeySharesIdentifiers()
+			result, err := core.KeySharesIdentifiers(recovery)
 			if err != nil {
 				respondError(w, http.StatusInternalServerError, err)
 				return

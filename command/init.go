@@ -245,9 +245,9 @@ func (c *InitCommand) runInit(check bool, initRequest *api.InitRequest) int {
 		for i, secretShareMetadata := range resp.SecretSharesMetadata {
 			switch {
 			case secretShareMetadata.ID != "" && secretShareMetadata.Name != "":
-				c.Ui.Output(fmt.Sprintf("Unseal Key Identifier %d with name %q: %s", i+1, secretShareMetadata.Name, secretShareMetadata.ID))
+				c.Ui.Output(fmt.Sprintf("Unseal key identifier %d with name %q: %s", i+1, secretShareMetadata.Name, secretShareMetadata.ID))
 			case secretShareMetadata.ID != "":
-				c.Ui.Output(fmt.Sprintf("Unseal Key Identifier %d: %s", i+1, secretShareMetadata.ID))
+				c.Ui.Output(fmt.Sprintf("Unseal key identifier %d: %s", i+1, secretShareMetadata.ID))
 			default:
 				c.Ui.Error("Invalid unseal key shares metadata")
 				return 1
@@ -271,9 +271,9 @@ func (c *InitCommand) runInit(check bool, initRequest *api.InitRequest) int {
 			for i, recoveryShareMetadata := range resp.RecoverySharesMetadata {
 				switch {
 				case recoveryShareMetadata.ID != "" && recoveryShareMetadata.Name != "":
-					c.Ui.Output(fmt.Sprintf("Recovery Key Identifier %d with name %q: %s", i+1, recoveryShareMetadata.Name, recoveryShareMetadata.ID))
+					c.Ui.Output(fmt.Sprintf("Recovery key identifier %d with name %q: %s", i+1, recoveryShareMetadata.Name, recoveryShareMetadata.ID))
 				case recoveryShareMetadata.ID != "":
-					c.Ui.Output(fmt.Sprintf("Recovery Key Identifier %d: %s", i+1, recoveryShareMetadata.ID))
+					c.Ui.Output(fmt.Sprintf("Recovery key identifier %d: %s", i+1, recoveryShareMetadata.ID))
 				default:
 					c.Ui.Error("Invalid recovery key shares metadata")
 					return 1
@@ -404,7 +404,7 @@ Init Options:
 
   -recovery-shares-identifier-names
                             If provided, must be a comma-separated list of names
-                            to be associated with the unseal key identifiers. The
+                            to be associated with the recovery key identifiers. The
                             number of unique names supplied should match the value
                             of 'recovery-threshold'.
 
