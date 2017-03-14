@@ -14,27 +14,23 @@ import (
 	"github.com/hashicorp/vault/shamir"
 )
 
-const (
-	unsealKeyIdentifiers   = "unseal-key-identifiers"
-	recoveryKeyIdentifiers = "recovery-key-identifiers"
-)
-
-// keySharesMetadataStorageValue holds metadata about all the unseal key shares.
-// This informaion is stored during the initialization and is fetched post
-// unseal for logging purposes.
+// keySharesMetadataStorageValue holds metadata about all the shamir shares of
+// a key. This informaion is stored during the initialization and updated
+// during rekey. It is referred during unsealing, during rekeying and during
+// generation of a root token. Essentially in all the places where the key
+// shares are put to use.
 type keySharesMetadataStorageValue struct {
-	// Data is a map from each of the unseal key shard to its respective
-	// identifier.
+	// Data is a map from each of the key share to its respective identifier
 	Data map[string]*KeyShareMetadata `json:"data" structs:"data" mapstructure:"data"`
 }
 
-// KeyShareMetadata holds metadata associated with each unseal key shard
+// KeyShareMetadata holds metadata associated with each key share
 type KeyShareMetadata struct {
 	// Name is a human readable name optionally provided by the caller to be
-	// associated with the identifier of the unseal key.
+	// associated with the identifier of the key share.
 	Name string `json:"name" structs:"name" mapstructure:"name"`
 
-	// ID is the UUID associated with the unseal key shard
+	// ID is the UUID associated with the unseal key share
 	ID string `json:"id" structs:"id" mapstructure:"id"`
 }
 
@@ -62,10 +58,10 @@ type InitKeySharesIdentifiersResponse struct {
 	KeyIdentifiers []*KeyShareMetadata
 }
 
-// GenerateSharesResult is used to provide the master key and its unseal key
-// shares. If PGP keys are used to encrypt the key shares this will also hold
-// the encrypted key shares and the PGP key fingerprint of the respective key
-// that encrypted each shard.
+// GenerateSharesResult is used to hold the key and its shamir key shares. If
+// PGP keys are used to encrypt the key shares this will also hold the
+// encrypted key shares and the PGP key fingerprint of the respective key that
+// encrypted each share.
 type GenerateSharesResult struct {
 	Key                   []byte
 	KeyShares             [][]byte
@@ -142,7 +138,7 @@ func (c *Core) Initialized() (bool, error) {
 
 // generateShares takes in a seal configuration and creates a barrier key. The
 // key will then be split into the specified number of shares. If PGP keys are
-// supplied, each key shard will be encrypted with respective PGP keys.
+// supplied, each key share will be encrypted with respective PGP keys.
 func (c *Core) generateShares(sc *SealConfig) (*GenerateSharesResult, error) {
 	// Generate a barrier key
 	keyBytes, err := c.barrier.GenerateKey()
@@ -185,7 +181,7 @@ func (c *Core) generateShares(sc *SealConfig) (*GenerateSharesResult, error) {
 }
 
 // prepareKeySharesMetadata takes in the unseal key shares, both
-// encrypted and unencrypted, associates identifiers for each key shard and
+// encrypted and unencrypted, associates identifiers for each key share and
 // JSON encodes it. Identifier for unencrypted key shares will be UUIDs.
 func (c *Core) prepareKeySharesMetadata(keyShares [][]byte, keyIdentifierNames string) ([]byte, []*KeyShareMetadata, error) {
 	// If keyIdentifierNames are supplied, parse them
@@ -205,8 +201,8 @@ func (c *Core) prepareKeySharesMetadata(keyShares [][]byte, keyIdentifierNames s
 
 	var keySharesMetadata []*KeyShareMetadata
 
-	// Associate a UUID for each unseal key shard
-	for i, keyShard := range keyShares {
+	// Associate a UUID for each key share
+	for i, keyShare := range keyShares {
 		metadata := &KeyShareMetadata{}
 		keyUUID, err := uuid.GenerateUUID()
 		if err != nil {
@@ -220,7 +216,7 @@ func (c *Core) prepareKeySharesMetadata(keyShares [][]byte, keyIdentifierNames s
 			metadata.Name = identifierNames[i]
 		}
 
-		keySharesMetadataValue.Data[base64.StdEncoding.EncodeToString(salt.SHA256Hash(keyShard))] = metadata
+		keySharesMetadataValue.Data[base64.StdEncoding.EncodeToString(salt.SHA256Hash(keyShare))] = metadata
 		keySharesMetadata = append(keySharesMetadata, metadata)
 	}
 
@@ -298,7 +294,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 	var secretSharesMetadataJSON []byte
 
 	//
-	// Prepare metadata for each of the unseal key shares generated. Associate
+	// Prepare metadata for each of the unseal key share generated. Associate
 	// the metatada with plaintext unseal key shares and not the PGP encrypted
 	// key shares. Metadata should be created for all the key shares and hence
 	// this should be done before processing stored keys.

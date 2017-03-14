@@ -234,23 +234,23 @@ func (c *InitCommand) runInit(check bool, initRequest *api.InitRequest) int {
 		} else {
 			c.Ui.Output(fmt.Sprintf("Unseal Key %d: %s", i+1, key))
 		}
-	}
 
-	if len(resp.SecretSharesMetadata) > 0 {
-		if len(resp.Keys) != len(resp.SecretSharesMetadata) {
-			c.Ui.Error("Number of key shares returned is not matching the number of key shares metadata items")
-			return 1
-		}
-
-		for i, secretShareMetadata := range resp.SecretSharesMetadata {
-			switch {
-			case secretShareMetadata.ID != "" && secretShareMetadata.Name != "":
-				c.Ui.Output(fmt.Sprintf("Unseal key identifier %d with name %q: %s", i+1, secretShareMetadata.Name, secretShareMetadata.ID))
-			case secretShareMetadata.ID != "":
-				c.Ui.Output(fmt.Sprintf("Unseal key identifier %d: %s", i+1, secretShareMetadata.ID))
-			default:
-				c.Ui.Error("Invalid unseal key shares metadata")
+		if len(resp.SecretSharesMetadata) > 0 {
+			if len(resp.Keys) != len(resp.SecretSharesMetadata) {
+				c.Ui.Error("Number of key shares returned is not matching the number of key shares metadata items")
 				return 1
+			}
+
+			for i, secretShareMetadata := range resp.SecretSharesMetadata {
+				switch {
+				case secretShareMetadata.ID != "" && secretShareMetadata.Name != "":
+					c.Ui.Output(fmt.Sprintf("Unseal key identifier %d with name %q: %s", i+1, secretShareMetadata.Name, secretShareMetadata.ID))
+				case secretShareMetadata.ID != "":
+					c.Ui.Output(fmt.Sprintf("Unseal key identifier %d: %s", i+1, secretShareMetadata.ID))
+				default:
+					c.Ui.Error("Invalid unseal key shares metadata")
+					return 1
+				}
 			}
 		}
 	}
@@ -263,7 +263,7 @@ func (c *InitCommand) runInit(check bool, initRequest *api.InitRequest) int {
 		}
 
 		if len(resp.RecoverySharesMetadata) > 0 {
-			if len(resp.Keys) != len(resp.RecoverySharesMetadata) {
+			if len(resp.RecoveryKeys) != len(resp.RecoverySharesMetadata) {
 				c.Ui.Error("Number of recovery key shares returned is not matching the number of recovery key shares metadata items")
 				return 1
 			}

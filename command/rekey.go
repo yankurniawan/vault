@@ -89,22 +89,18 @@ func (c *RekeyCommand) Run(args []string) int {
 
 	// Start the rekey process if not started
 	if !rekeyStatus.Started {
+		rekeyInitRequest := &api.RekeyInitRequest{
+			SecretShares:             shares,
+			SecretThreshold:          threshold,
+			KeySharesIdentifierNames: keySharesIdentifierNames,
+			PGPKeys:                  pgpKeys,
+			Backup:                   backup,
+		}
+
 		if recoveryKey {
-			rekeyStatus, err = client.Sys().RekeyRecoveryKeyInit(&api.RekeyInitRequest{
-				SecretShares:             shares,
-				SecretThreshold:          threshold,
-				KeySharesIdentifierNames: keySharesIdentifierNames,
-				PGPKeys:                  pgpKeys,
-				Backup:                   backup,
-			})
+			rekeyStatus, err = client.Sys().RekeyRecoveryKeyInit(rekeyInitRequest)
 		} else {
-			rekeyStatus, err = client.Sys().RekeyInit(&api.RekeyInitRequest{
-				SecretShares:             shares,
-				SecretThreshold:          threshold,
-				KeySharesIdentifierNames: keySharesIdentifierNames,
-				PGPKeys:                  pgpKeys,
-				Backup:                   backup,
-			})
+			rekeyStatus, err = client.Sys().RekeyInit(rekeyInitRequest)
 		}
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf("Error initializing rekey: %s", err))
